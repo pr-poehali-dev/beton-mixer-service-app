@@ -125,7 +125,7 @@ const Index = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <Icon name="Truck" className="text-blue-600" size={32} />
-              <h1 className="text-2xl font-bold text-gray-900">БетонТакси</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Промышленные Технологии</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" size="sm">
@@ -521,6 +521,107 @@ const Index = () => {
           </div>
         )}
 
+        {activeTab === "gps" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icon name="Map" className="mr-2" size={20} />
+                  GPS-Отслеживание транспорта
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-200 rounded-lg h-96 relative overflow-hidden mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-green-100">
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Icon name="MapPin" size={48} className="mx-auto mb-4 text-blue-600" />
+                        <p className="text-lg font-medium text-gray-700">Карта GPS-трекинга</p>
+                        <p className="text-sm text-gray-500">Отображение маршрутов в реальном времени</p>
+                      </div>
+                    </div>
+                    
+                    {/* Mock GPS markers */}
+                    {drivers.map(driver => (
+                      <div 
+                        key={driver.id}
+                        className="absolute w-3 h-3 bg-blue-600 rounded-full animate-pulse"
+                        style={{
+                          left: `${20 + driver.id * 15}%`,
+                          top: `${30 + driver.id * 10}%`
+                        }}
+                      >
+                        <div className="absolute -top-8 -left-6 bg-white px-2 py-1 rounded shadow text-xs font-medium">
+                          {driver.name.split(' ')[0]}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Активные маршруты</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {drivers.filter(d => d.status === "busy").map(driver => (
+                          <div key={driver.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                            <div>
+                              <p className="font-medium">{driver.name}</p>
+                              <p className="text-sm text-gray-600">Груз: {driver.currentLoad}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-blue-600">Возврат: {driver.returnTime}</p>
+                              <Button variant="outline" size="sm" className="mt-1">
+                                <Icon name="Route" size={12} className="mr-1" />
+                                Маршрут
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Расчет времени возврата</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Путь до объекта:</span>
+                          <span className="font-medium">25 мин</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Разгрузка:</span>
+                          <span className="font-medium">30 мин</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Обратный путь:</span>
+                          <span className="font-medium">25 мин</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Мойка миксера:</span>
+                          <span className="font-medium">15 мин</span>
+                        </div>
+                        <div className="border-t pt-3">
+                          <div className="flex justify-between items-center font-bold">
+                            <span>Общее время:</span>
+                            <span className="text-blue-600">1у1 35м</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {activeTab === "orders" && (
           <div className="space-y-6">
             <Card>
@@ -561,9 +662,3 @@ const Index = () => {
             </Card>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-export default Index;
