@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,64 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [showWaybill, setShowWaybill] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [fuelConsumption, setFuelConsumption] = useState({});
+
+  // Симуляция уведомлений
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const events = [
+        { type: 'arrival', driver: 'Алексей Иванов', location: 'ул. Строительная, 45' },
+        { type: 'departure', driver: 'Сергей Петров', location: 'Промзона, участок 12' },
+        { type: 'loading', driver: 'Михаил Сидоров', location: 'База' }
+      ];
+      
+      const randomEvent = events[Math.floor(Math.random() * events.length)];
+      
+      if (Math.random() > 0.7) { // 30% вероятность уведомления
+        const notification = {
+          id: Date.now(),
+          ...randomEvent,
+          time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        setNotifications(prev => [notification, ...prev.slice(0, 4)]);
+        
+        const messages = {
+          arrival: `🚛 ${randomEvent.driver} прибыл на объект "${randomEvent.location}"`,
+          departure: `🚀 ${randomEvent.driver} выехал с объекта "${randomEvent.location}"`,
+          loading: `⚡ ${randomEvent.driver} начал загрузку на базе`
+        };
+        
+        toast({
+          title: "GPS Уведомление",
+          description: messages[randomEvent.type],
+          duration: 4000,
+        });
+      }
+    }, 8000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Расчет расхода топлива
+  const calculateFuelConsumption = (distance, vehicleType) => {
+    const fuelRates = {
+      'КамАЗ Миксер': 25, // л/100км
+      'КамАЗ Бетононасос': 28,
+      'КамАЗ Миксер (загруженный)': 32
+    };
+    
+    const rate = fuelRates[vehicleType] || 25;
+    const distanceNum = parseFloat(distance.replace(/[^0-9.]/g, ''));
+    return ((distanceNum * rate) / 100).toFixed(1);
+  };
 
   const drivers = [
     { 
@@ -23,7 +76,9 @@ const Index = () => {
       status: "delivering", 
       distance: "1,245 км", 
       hours: "8.5 ч", 
-      concrete: "15 м³", 
+      concrete: "15 м³",
+      fuelConsumption: "48.5 л",
+      fuelCost: "2,425 ₽",
       currentOrder: {
         address: "ул. Строительная, 45",
         startTime: "14:30",
@@ -41,7 +96,9 @@ const Index = () => {
       status: "returning", 
       distance: "987 км", 
       hours: "7.2 ч", 
-      concrete: "25 м³", 
+      concrete: "25 м³",
+      fuelConsumption: "72.3 л",
+      fuelCost: "3,615 ₽",
       currentOrder: {
         address: "Промзона, участок 12",
         startTime: "13:00",
@@ -60,6 +117,8 @@ const Index = () => {
       distance: "1,456 км", 
       hours: "9.1 ч", 
       concrete: "140 м³",
+      fuelConsumption: "56.2 л",
+      fuelCost: "2,810 ₽",
       location: { lat: 55.7458, lng: 37.6076 }
     },
     { 
@@ -70,6 +129,8 @@ const Index = () => {
       distance: "743 км", 
       hours: "6.8 ч", 
       concrete: "78 м³",
+      fuelConsumption: "28.7 л",
+      fuelCost: "1,435 ₽",
       estimatedAvailable: "15:45",
       location: { lat: 55.7358, lng: 37.5976 }
     },
@@ -81,6 +142,8 @@ const Index = () => {
       distance: "1,123 км", 
       hours: "8.9 ч", 
       concrete: "18 м³",
+      fuelConsumption: "65.1 л",
+      fuelCost: "3,255 ₽",
       nextOrder: {
         address: "ЖК Солнечный, корпус 3",
         scheduledTime: "17:15"
@@ -128,10 +191,17 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gray-900">Промышленные Технологии</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Icon name="Bell" size={16} className="mr-2" />
-                Уведомления
-              </Button>
+              <div className="relative">
+                <Button variant="outline" size="sm">
+                  <Icon name="Bell" size={16} className="mr-2" />
+                  Уведомления
+                  {notifications.length > 0 && (
+                    <Badge className="absolute -top-2 -right-2 px-1 min-w-[1.2rem] h-5 bg-red-500 text-white text-xs">
+                      {notifications.length}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
               <Avatar>
                 <AvatarFallback>ОП</AvatarFallback>
               </Avatar>
@@ -167,6 +237,14 @@ const Index = () => {
             <Icon name="Users" size={16} className="mr-2" />
             Водители
           </Button>
+          <Button 
+            variant={activeTab === "fuel" ? "default" : "ghost"}
+            onClick={() => setActiveTab("fuel")}
+            className="text-sm"
+          >
+            <Icon name="Fuel" size={16} className="mr-2" />
+            Топливо
+          </Button>
         </div>
 
         {activeTab === "dashboard" && (
@@ -199,10 +277,10 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Бетона сегодня</p>
-                      <p className="text-3xl font-bold text-orange-600">120м³</p>
+                      <p className="text-sm font-medium text-gray-600">Расход топлива</p>
+                      <p className="text-3xl font-bold text-orange-600">271л</p>
                     </div>
-                    <Icon name="BarChart" className="text-orange-600" size={24} />
+                    <Icon name="Fuel" className="text-orange-600" size={24} />
                   </div>
                 </CardContent>
               </Card>
@@ -218,6 +296,34 @@ const Index = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Notifications Panel */}
+            {notifications.length > 0 && (
+              <Card className="border-l-4 border-l-blue-600 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-blue-800">
+                    <Icon name="Bell" className="mr-2" size={20} />
+                    Последние уведомления
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {notifications.slice(0, 3).map(notification => (
+                      <div key={notification.id} className="flex items-center justify-between p-2 bg-white rounded">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            notification.type === 'arrival' ? 'bg-green-500' : 
+                            notification.type === 'departure' ? 'bg-orange-500' : 'bg-blue-500'
+                          }`}></div>
+                          <span className="text-sm">{notification.driver} - {notification.location}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">{notification.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -263,76 +369,152 @@ const Index = () => {
           </div>
         )}
 
-        {activeTab === "gps" && (
+        {activeTab === "fuel" && (
           <div className="space-y-6">
-            {/* GPS Map View */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Мониторинг топлива</h2>
+              <div className="flex space-x-2">
+                <Button variant="outline">
+                  <Icon name="Download" size={16} className="mr-2" />
+                  Экспорт
+                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Icon name="Plus" size={16} className="mr-2" />
+                  Заправка
+                </Button>
+              </div>
+            </div>
+
+            {/* Fuel Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Расход сегодня</p>
+                      <p className="text-3xl font-bold text-red-600">271л</p>
+                      <p className="text-sm text-gray-500">₽13,540</p>
+                    </div>
+                    <Icon name="TrendingUp" className="text-red-600" size={24} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Средний расход</p>
+                      <p className="text-3xl font-bold text-blue-600">26.8л</p>
+                      <p className="text-sm text-gray-500">на 100км</p>
+                    </div>
+                    <Icon name="Gauge" className="text-blue-600" size={24} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Экономия</p>
+                      <p className="text-3xl font-bold text-green-600">-8%</p>
+                      <p className="text-sm text-gray-500">vs прошлый месяц</p>
+                    </div>
+                    <Icon name="TrendingDown" className="text-green-600" size={24} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Drivers Fuel Table */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Icon name="Map" className="mr-2" size={20} />
-                  GPS Трекинг в реальном времени
-                </CardTitle>
+                <CardTitle>Расход топлива по водителям</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="relative bg-gradient-to-br from-blue-50 to-green-50 rounded-lg border-2 border-dashed border-gray-300 h-96 mb-6">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <Icon name="MapPin" size={48} className="mx-auto text-blue-600 mb-4" />
-                      <p className="text-lg font-medium text-gray-700">Интерактивная карта</p>
-                      <p className="text-sm text-gray-500">GPS позиции всех миксеров в реальном времени</p>
+                <div className="space-y-4">
+                  {drivers.map(driver => (
+                    <div key={driver.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarFallback>{driver.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h4 className="font-medium">{driver.name}</h4>
+                          <p className="text-sm text-gray-600">{driver.vehicle}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-6 text-right">
+                        <div>
+                          <p className="text-sm text-gray-600">Пробег</p>
+                          <p className="font-medium">{driver.distance}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Топливо</p>
+                          <p className="font-medium text-orange-600">{driver.fuelConsumption}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Стоимость</p>
+                          <p className="font-medium text-red-600">{driver.fuelCost}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Расход</p>
+                          <p className="font-medium">{((parseFloat(driver.fuelConsumption) / parseFloat(driver.distance.replace(/[^0-9.]/g, ''))) * 100).toFixed(1)}л/100км</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Fuel Cards */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Топливные карты</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="text-sm opacity-90">Лукойл</p>
+                        <p className="text-lg font-bold">**** 3456</p>
+                      </div>
+                      <Icon name="CreditCard" size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm opacity-90">Баланс: 45,230 ₽</p>
+                      <p className="text-xs opacity-75">Лимит: 100,000 ₽</p>
                     </div>
                   </div>
                   
-                  {/* Mock GPS Points */}
-                  <div className="absolute top-16 left-20 w-4 h-4 bg-blue-600 rounded-full animate-pulse"></div>
-                  <div className="absolute top-32 right-24 w-4 h-4 bg-orange-600 rounded-full animate-pulse"></div>
-                  <div className="absolute bottom-20 left-32 w-4 h-4 bg-green-600 rounded-full animate-pulse"></div>
-                  <div className="absolute bottom-32 right-16 w-4 h-4 bg-purple-600 rounded-full animate-pulse"></div>
-                  <div className="absolute top-20 right-1/2 w-4 h-4 bg-cyan-600 rounded-full animate-pulse"></div>
-                  
-                  {/* Base marker */}
-                  <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">БАЗА</div>
+                  <div className="p-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="text-sm opacity-90">Роснефть</p>
+                        <p className="text-lg font-bold">**** 7890</p>
+                      </div>
+                      <Icon name="CreditCard" size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm opacity-90">Баланс: 67,850 ₽</p>
+                      <p className="text-xs opacity-75">Лимит: 150,000 ₽</p>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Active Routes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {drivers.filter(d => d.currentOrder).map(driver => (
-                    <Card key={driver.id} className="border-l-4 border-l-blue-600">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium">{driver.name}</h4>
-                          <Badge className={getStatusColor(driver.status)}>
-                            {getStatusText(driver.status)}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Маршрут:</span>
-                            <span className="font-medium">{driver.currentOrder.address}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Объем:</span>
-                            <span className="font-medium">{driver.concrete}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Расстояние:</span>
-                            <span className="font-medium">{driver.currentOrder.route.distance}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Время в пути:</span>
-                            <span className="font-medium">{driver.currentOrder.route.duration}</span>
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="flex justify-between font-medium text-green-600">
-                            <span>Возврат на базу:</span>
-                            <span>{driver.currentOrder.estimatedReturn}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  
+                  <div className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg text-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="text-sm opacity-90">Газпром</p>
+                        <p className="text-lg font-bold">**** 1234</p>
+                      </div>
+                      <Icon name="CreditCard" size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm opacity-90">Баланс: 28,640 ₽</p>
+                      <p className="text-xs opacity-75">Лимит: 80,000 ₽</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -372,9 +554,16 @@ const Index = () => {
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center">
                           <Icon name="Package" size={14} className="mr-1 text-green-600" />
-                          Бетон всего
+                          Бетон
                         </span>
                         <span className="font-medium">{driver.concrete}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center">
+                          <Icon name="Fuel" size={14} className="mr-1 text-red-600" />
+                          Топливо
+                        </span>
+                        <span className="font-medium">{driver.fuelConsumption}</span>
                       </div>
                       
                       {driver.currentOrder && (
@@ -411,214 +600,6 @@ const Index = () => {
                 </Card>
               ))}
             </div>
-          </div>
-        )}
-
-        {activeTab === "waybills" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Icon name="FileText" className="mr-2" size={20} />
-                  Электронные накладные
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {orders.map(order => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <h4 className="font-medium">Накладная #{order.waybillId}</h4>
-                            <p className="text-sm text-gray-600">{order.address}</p>
-                          </div>
-                          <Badge 
-                            variant={order.status === "active" ? "default" : 
-                                    order.status === "pending" ? "secondary" : "outline"}
-                            className={order.status === "active" ? "bg-blue-600" : 
-                                      order.status === "completed" ? "bg-green-600" : ""}
-                          >
-                            {order.status === "active" ? "В работе" : 
-                             order.status === "pending" ? "Ожидает" : "Выполнен"}
-                          </Badge>
-                        </div>
-                        <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-gray-600">
-                          <span>Объем: {order.concrete}</span>
-                          <span>Водитель: {order.driver}</span>
-                          <span>Время: {order.time}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Icon name="Eye" size={14} className="mr-1" />
-                              Просмотр
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Накладная #{order.waybillId}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Информация о заказе</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <p><strong>Адрес:</strong> {order.address}</p>
-                                    <p><strong>Объем:</strong> {order.concrete}</p>
-                                    <p><strong>Время:</strong> {order.time}</p>
-                                    <p><strong>Водитель:</strong> {order.driver}</p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium mb-2">Данные о доставке</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <p><strong>Выехал с базы:</strong> {order.time}</p>
-                                    <p><strong>Время разгрузки:</strong> 30 мин</p>
-                                    <p><strong>Время мойки:</strong> 15 мин</p>
-                                    <p><strong>Километраж:</strong> 24.6 км</p>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {order.status === "completed" && (
-                                <div className="border-t pt-4">
-                                  <h4 className="font-medium mb-2">Подписи</h4>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                                      <p className="text-sm text-gray-600 mb-2">Подпись водителя</p>
-                                      <div className="h-16 bg-white border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                                        <span className="text-gray-400 text-xs">✓ Подписано</span>
-                                      </div>
-                                    </div>
-                                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                                      <p className="text-sm text-gray-600 mb-2">Подпись получателя</p>
-                                      <div className="h-16 bg-white border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                                        <span className="text-gray-400 text-xs">✓ Подписано</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        
-                        {order.status === "completed" && (
-                          <Button variant="outline" size="sm">
-                            <Icon name="Download" size={14} className="mr-1" />
-                            PDF
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "gps" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Icon name="Map" className="mr-2" size={20} />
-                  GPS-Отслеживание транспорта
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-200 rounded-lg h-96 relative overflow-hidden mb-6">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-green-100">
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Icon name="MapPin" size={48} className="mx-auto mb-4 text-blue-600" />
-                        <p className="text-lg font-medium text-gray-700">Карта GPS-трекинга</p>
-                        <p className="text-sm text-gray-500">Отображение маршрутов в реальном времени</p>
-                      </div>
-                    </div>
-                    
-                    {/* Mock GPS markers */}
-                    {drivers.map(driver => (
-                      <div 
-                        key={driver.id}
-                        className="absolute w-3 h-3 bg-blue-600 rounded-full animate-pulse"
-                        style={{
-                          left: `${20 + driver.id * 15}%`,
-                          top: `${30 + driver.id * 10}%`
-                        }}
-                      >
-                        <div className="absolute -top-8 -left-6 bg-white px-2 py-1 rounded shadow text-xs font-medium">
-                          {driver.name.split(' ')[0]}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Активные маршруты</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {drivers.filter(d => d.status === "busy").map(driver => (
-                          <div key={driver.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                            <div>
-                              <p className="font-medium">{driver.name}</p>
-                              <p className="text-sm text-gray-600">Груз: {driver.currentLoad}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-blue-600">Возврат: {driver.returnTime}</p>
-                              <Button variant="outline" size="sm" className="mt-1">
-                                <Icon name="Route" size={12} className="mr-1" />
-                                Маршрут
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Расчет времени возврата</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Путь до объекта:</span>
-                          <span className="font-medium">25 мин</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Разгрузка:</span>
-                          <span className="font-medium">30 мин</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Обратный путь:</span>
-                          <span className="font-medium">25 мин</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Мойка миксера:</span>
-                          <span className="font-medium">15 мин</span>
-                        </div>
-                        <div className="border-t pt-3">
-                          <div className="flex justify-between items-center font-bold">
-                            <span>Общее время:</span>
-                            <span className="text-blue-600">1у1 35м</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
@@ -662,3 +643,9 @@ const Index = () => {
             </Card>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+export default Index;
